@@ -3,10 +3,14 @@ library(caTools)
 library(Kendall)
 
 filename = 'GIMMS_Iberian'
-setwd('/home/maxim/Documents/coursework/time-series-analysis/data/')
+filename_class = 'clc8km_clip_recode_Iberian_2classes'
+#setwd('/home/maxim/Documents/coursework/time-series-analysis/data/')
+setwd('U:\\Time Series Analysis\\s5')
 cube = read.ENVI(filename,headerfile=paste(filename,'.hdr',sep='')) #from caTools
+luc<-read.ENVI(filename,headerfile=paste(filename_class,'.hdr',sep='')) #
 
 dim(cube)
+dim(luc)
 years = dim(cube)[3]/12
 lin = 1:12
 # Fourier Polynomials
@@ -35,9 +39,28 @@ integral = array(NA, 32)                    # dimensions: 32      Do we still ne
 #model_amp = array(NA, c(nrows, ncols))      # dimensions: 93, 152
 #model_peak = array(NA, c(nrows, ncols))     # dimensions: 93, 152
 
-pintegral = array(NA, c(nrows, ncols)) # dimensions: 93, 152
-pamp = array(NA, c(nrows, ncols))      # dimensions: 93, 152
-ppeak = array(NA, c(nrows, ncols))     # dimensions: 93, 152
+pintegral = array(NA, 32) 
+pamp = array(NA, 32)      
+ppeak = array(NA, 32)   
+
+syndrome<-matrix(data <- -999, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
+
+## Some helpful functions
+
+## increasing
+incr <- function(x, sig){
+  abs(x) < sig & x > 0
+}
+
+## decreasing
+decr <- function(x, sig){
+  abs(x) < sig & x < 0
+}
+
+## no change
+nought <- function(x, sig){
+  abs(x) > sig
+}
 
 pb = txtProgressBar(title='progress bar',min=0,max =nrows) #run together with loop
 for (i in 1:nrows) {
@@ -69,9 +92,25 @@ for (i in 1:nrows) {
       # Need to dissect the previous results to figure out what to do here:
       # Content of the MannKendall object: tau, sl, S, D, varS
       
-      pintegral[i, j] = model_integral$sl * as.numeric(sign(model_integral$tau))
-      pamp[i, j] = model_amp$sl * as.numeric(sign(model_amp$tau))
-      ppeak[i, j] = model_peak$sl * as.numeric(sign(model_peak$tau))
+      pintegral = model_integral$sl * as.numeric(sign(model_integral$tau))
+      pamp = model_amp$sl * as.numeric(sign(model_amp$tau))
+      ppeak = model_peak$sl * as.numeric(sign(model_peak$tau))
+      
+      
+      ## Syndromes - part B of Project
+      
+      # arable land    
+      sig <- 0.1 # pseudo p-value
+      if (incr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1) 
+      {syndrome[i,j] <- 3} 
+      # +oo = increasing biomass
+      #...
+      # semi-natural      
+      
+      if (abs(pintegral) < sig & pintegral > 0 & abs(ppeak) < sig & ppeak > 0 & abs(pamp) > sig &  luc[i,j] == 2)
+      {syndrome[i,j] <- 1} 
+      # ++o =  decreasing biomass
+      # ...        
       
     }
   }
