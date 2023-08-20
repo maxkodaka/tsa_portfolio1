@@ -130,7 +130,7 @@ for (i in 1:nrows) {
       if(s>=2){
         twosigtrends005[i,j] = 1
       } else(
-        twosigtrends005[i,j] = 1
+        twosigtrends005[i,j] = 0
       )
       
       # For significance of 0.10
@@ -154,7 +154,7 @@ for (i in 1:nrows) {
       if(s>=2){
         twosigtrends010[i,j] = 1
       } else(
-        twosigtrends010[i,j] = 1
+        twosigtrends010[i,j] = 0
       )
       
     }
@@ -164,15 +164,26 @@ close(pb)
 
 file_out_numsigtrends005 = '/home/maxim/Documents/coursework/time-series-analysis/output/numsigtrends_005.tif'
 file_out_numsigtrends010 = '/home/maxim/Documents/coursework/time-series-analysis/output/numsigtrends_010.tif'
-file_out_syndrome = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_raster.tif'
+
+file_out_twosigtrends005 = '/home/maxim/Documents/coursework/time-series-analysis/output/twosigtrends_005.tif'
+file_out_twosigtrends010 = '/home/maxim/Documents/coursework/time-series-analysis/output/twosigtrends_010.tif'
+
+file_out_syndrome = '/home/maxim/Documents/coursework/time-series-analysis/output/output/syndrome_raster.tif'
 
 cube = brick(filename)
 numsigtrends005_raster=raster(numsigtrends005,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
 numsigtrends010_raster=raster(numsigtrends010,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
 
+twosigtrends005_raster=raster(twosigtrends005,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+twosigtrends010_raster=raster(twosigtrends010,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+
 #syndrome_raster=raster(syndrome,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
 writeRaster(numsigtrends005_raster, file_out_numsigtrends005, format="GTiff", overwrite=TRUE)
 writeRaster(numsigtrends010_raster, file_out_numsigtrends010, format="GTiff", overwrite=TRUE)
+
+writeRaster(twosigtrends005_raster, file_out_twosigtrends005, format="GTiff", overwrite=TRUE)
+writeRaster(twosigtrends010_raster, file_out_twosigtrends010, format="GTiff", overwrite=TRUE)
+
 #writeRaster(syndrome_raster, file_out, format="GTiff", overwrite=TRUE)
 #KML (syndrome_raster, file ='syndrome',  col = hcl.colors(8, "YlOrRd", rev = TRUE) ,
 #     maxpixels = ncell ( raster (pval_raster)),overwrite="TRUE")
