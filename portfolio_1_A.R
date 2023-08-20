@@ -48,6 +48,8 @@ ppeak = array(NA, 32)
 syndrome<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 numsigtrends005 = syndrome
 numsigtrends010 = syndrome
+twosigtrends005 = syndrome
+twosigtrends010 = syndrome
 ## Some helpful functions
 
 ## increasing
@@ -125,6 +127,12 @@ for (i in 1:nrows) {
       
       numsigtrends005[i,j] = s
       
+      if(s>=2){
+        twosigtrends005[i,j] = 1
+      } else(
+        twosigtrends005[i,j] = 1
+      )
+      
       # For significance of 0.10
       
       s = 0
@@ -142,8 +150,13 @@ for (i in 1:nrows) {
       }
       
       numsigtrends010[i,j] = s      
-
- 
+      
+      if(s>=2){
+        twosigtrends010[i,j] = 1
+      } else(
+        twosigtrends010[i,j] = 1
+      )
+      
     }
   }
 }
