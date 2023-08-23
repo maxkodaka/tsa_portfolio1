@@ -51,11 +51,18 @@ numsigtrends010 = syndrome
 twosigtrends005 = syndrome
 twosigtrends010 = syndrome
 
-sigtrendstats = data.frame(
+sigtrendstats005 = data.frame(
   s = c(0,1,2,3),
   arable_cnt = array(0, 4),
   seminatural_cnt = array(0, 4)
 )
+
+sigtrendstats010 = data.frame(
+  s = c(0,1,2,3),
+  arable_cnt = array(0, 4),
+  seminatural_cnt = array(0, 4)
+)
+
 ## Some helpful functions
 
 ## increasing
@@ -139,6 +146,11 @@ for (i in 1:nrows) {
         twosigtrends005[i,j] = 0
       )
       
+      # Counts of trends by land cover class for significance of 0.05
+      if (!is.na(luc[i,j])){
+        sigtrendstats005[s+1,luc[i,j]+1] = sigtrendstats005[s+1,luc[i,j]+1] + 1
+      }
+      
       # For significance of 0.10
       
       s = 0
@@ -163,9 +175,9 @@ for (i in 1:nrows) {
         twosigtrends010[i,j] = 0
       )
       
-      # Counts of trends by land cover class
+      # Counts of trends by land cover class for significance of 0.10
       if (!is.na(luc[i,j])){
-        sigtrendstats[s+1,luc[i,j]+1] = sigtrendstats[s+1,luc[i,j]+1] + 1
+        sigtrendstats010[s+1,luc[i,j]+1] = sigtrendstats010[s+1,luc[i,j]+1] + 1
       }
       
     }
@@ -176,8 +188,11 @@ close(pb)
 # Calculate cumulative percentages of the significant trend statistics
 
 for(i in 4:1){
-  sigtrendstats[i,'arable_cumpercent'] = sum(sigtrendstats['arable_cnt'][sigtrendstats['s']>=i-1])/sum(sigtrendstats['arable_cnt'])
-  sigtrendstats[i,'seminatural_cumpercent'] = sum(sigtrendstats['seminatural_cnt'][sigtrendstats['s']>=i-1])/sum(sigtrendstats['seminatural_cnt'])
+  sigtrendstats005[i,'arable_cumpercent'] = sum(sigtrendstats005['arable_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['arable_cnt'])
+  sigtrendstats010[i,'arable_cumpercent'] = sum(sigtrendstats010['arable_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['arable_cnt'])
+  
+  sigtrendstats005[i,'seminatural_cumpercent'] = sum(sigtrendstats005['seminatural_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['seminatural_cnt'])
+  sigtrendstats010[i,'seminatural_cumpercent'] = sum(sigtrendstats010['seminatural_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['seminatural_cnt'])
 }
 
 # output geotiff files
