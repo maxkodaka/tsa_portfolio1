@@ -50,6 +50,12 @@ numsigtrends005 = syndrome
 numsigtrends010 = syndrome
 twosigtrends005 = syndrome
 twosigtrends010 = syndrome
+
+sigtrendstats = data.frame(
+  s = c(0,1,2,3),
+  arable_cnt = array(0, 4),
+  seminatural_cnt = array(0, 4)
+)
 ## Some helpful functions
 
 ## increasing
@@ -157,10 +163,24 @@ for (i in 1:nrows) {
         twosigtrends010[i,j] = 0
       )
       
+      # Counts of trends by land cover class
+      if (!is.na(luc[i,j])){
+        sigtrendstats[s+1,luc[i,j]+1] = sigtrendstats[s+1,luc[i,j]+1] + 1
+      }
+      
     }
   }
 }
 close(pb)
+
+# Calculate cumulative percentages of the significant trend statistics
+
+for(i in 4:1){
+  sigtrendstats[i,'arable_cumpercent'] = sum(sigtrendstats['arable_cnt'][sigtrendstats['s']>=i-1])/sum(sigtrendstats['arable_cnt'])
+  sigtrendstats[i,'seminatural_cumpercent'] = sum(sigtrendstats['seminatural_cnt'][sigtrendstats['s']>=i-1])/sum(sigtrendstats['seminatural_cnt'])
+}
+
+# output geotiff files
 
 file_out_numsigtrends005 = '/home/maxim/Documents/coursework/time-series-analysis/output/numsigtrends_005.tif'
 file_out_numsigtrends010 = '/home/maxim/Documents/coursework/time-series-analysis/output/numsigtrends_010.tif'
