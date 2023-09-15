@@ -4,7 +4,7 @@ library(Kendall)
 
 filename = 'GIMMS_Iberian'
 filename_class = 'clc8km_clip_recode_Iberian_2classes'
-file_out = '/home/maxim/Documents/coursework/time-series-analysis/s6/syndrome_raster.tif'
+
 setwd('/home/maxim/Documents/coursework/time-series-analysis/data/')
 #setwd('U:\\Time Series Analysis\\s5')
 cube = read.ENVI(filename,headerfile=paste(filename,'.hdr',sep='')) #from caTools
@@ -46,6 +46,8 @@ ppeak = array(NA, 32)
 
 #syndrome<-matrix(data <- -999, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 syndrome<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
+syndrome_natural<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
+syndrome_arable<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 numsigtrends005 = syndrome
 numsigtrends010 = syndrome
 ## Some helpful functions
@@ -88,7 +90,7 @@ for (i in 1:nrows) {
         time = time + 12
       }
       
-      model_integral = MannKendall(ts(integral))     
+      model_integral = MannKendall(ts(integral))     # Should be seasonal mann kendall
       model_amp = MannKendall(ts(magnitude))         
       model_peak = MannKendall(ts(peaktime))         
       
@@ -163,131 +165,138 @@ for (i in 1:nrows) {
       # semi-natural    
       
       # increasing biomass = 1
-      
-      # +oo
-      if (incr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 2) 
-      {syndrome[i,j] <- 1}
-      
-      # +o+
-      if (incr(pintegral,sig) & nought(ppeak,sig) & incr(pamp,sig) &  luc[i,j] == 2)
-      {syndrome[i,j] <- 1} 
-      
-      # ++o
-      if (incr(pintegral,sig) & incr(ppeak,sig) & nought(pamp,sig) &  luc[i,j] == 2)
-      {syndrome[i,j] <- 1} 
-
-      # +-o
-      if (incr(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) &  luc[i,j] == 2)
-      {syndrome[i,j] <- 1} 
-      
-      # +o-
-      if (incr(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) &  luc[i,j] == 2)
-      {syndrome[i,j] <- 1} 
-      
-      # decreasing biomass = 2
-      
-      # ---
-      if (decr(pintegral,sig) & decr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 2)
-      {syndrome[i,j] <- 2}
-      
-      # -oo
-      if (decr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 2)
-      {syndrome[i,j] <- 2}
-      
-      # -o-
-      if (decr(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 2)
-      {syndrome[i,j] <- 2}
-      
-      # --o
-      if (decr(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 2)
-      {syndrome[i,j] <- 2}
-      
-      # arable land (luc = 1)
-      
-      # increasing productivity = 4
-      
-      # +oo
-      if (incr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 4}
-      
-      # +o+
-      if (incr(pintegral,sig) & nought(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 4}
-      
-      # decreasing productivity = 5
-      
-      # -oo
-      if (decr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 5}
-      
-      
-      # -o-
-      if (decr(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 5}
-      
-      
-      # expansion of irrigated arable land = 6
-      
-      # +++
-      if (incr(pintegral,sig) & incr(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 6}
-      
-      # ++o
-      if (incr(pintegral,sig) & incr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 6}
-      
-      # ++-
-      if (incr(pintegral,sig) & incr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 6}
-      
-      
-      # decline of irrigated arable land = 7
-      
-      # ---
-      if (decr(pintegral,sig) & decr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 7}
-      
-      
-      # --o
-      if (decr(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 7}
-      
-      # o-o
-      if (nought(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 7}
-      
-      # o--
-      if (nought(pintegral,sig) & decr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 7}
-      
-      
-      # crop change = 3
-      
-      # oo-
-      if (nought(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 3}
-      
-      # oo+
-      if (nought(pintegral,sig) & nought(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 3}
-      
-      # o+-
-      if (nought(pintegral,sig) & incr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 3}
-      
-      # o+o
-      if (nought(pintegral,sig) & incr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 3}
-      
-      # o++
-      if (nought(pintegral,sig) & incr(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
-      {syndrome[i,j] <- 3}
-      
-      # no change
-      
-      # ooo
-      if (nought(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig))
-      {syndrome[i,j] <- 0}
+      if(!is.na(luc[i,j]))
+      {
+        # +oo
+        if (incr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 2) 
+        {syndrome_natural[i,j] <- 1}
+        
+        # +o+
+        if (incr(pintegral,sig) & nought(ppeak,sig) & incr(pamp,sig) &  luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 1} 
+        
+        # ++o
+        if (incr(pintegral,sig) & incr(ppeak,sig) & nought(pamp,sig) &  luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 1} 
+        
+        # +-o
+        if (incr(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) &  luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 1} 
+        
+        # +o-
+        if (incr(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) &  luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 1} 
+        
+        # decreasing biomass = 2
+        
+        # ---
+        if (decr(pintegral,sig) & decr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 2}
+        
+        # -oo
+        if (decr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 2}
+        
+        # -o-
+        if (decr(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 2}
+        
+        # --o
+        if (decr(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 2)
+        {syndrome_natural[i,j] <- 2}
+        
+        # arable land (luc = 1)
+        
+        # increasing productivity = 4
+        
+        # +oo
+        if (incr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 4}
+        
+        # +o+
+        if (incr(pintegral,sig) & nought(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 4}
+        
+        # decreasing productivity = 5
+        
+        # -oo
+        if (decr(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 5}
+        
+        
+        # -o-
+        if (decr(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 5}
+        
+        
+        # expansion of irrigated arable land = 6
+        
+        # +++
+        if (incr(pintegral,sig) & incr(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 6}
+        
+        # ++o
+        if (incr(pintegral,sig) & incr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 6}
+        
+        # ++-
+        if (incr(pintegral,sig) & incr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 6}
+        
+        
+        # decline of irrigated arable land = 7
+        
+        # ---
+        if (decr(pintegral,sig) & decr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 7}
+        
+        
+        # --o
+        if (decr(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 7}
+        
+        # o-o
+        if (nought(pintegral,sig) & decr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 7}
+        
+        # o--
+        if (nought(pintegral,sig) & decr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 7}
+        
+        
+        # crop change = 3
+        
+        # oo-
+        if (nought(pintegral,sig) & nought(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 3}
+        
+        # oo+
+        if (nought(pintegral,sig) & nought(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 3}
+        
+        # o+-
+        if (nought(pintegral,sig) & incr(ppeak,sig) & decr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 3}
+        
+        # o+o
+        if (nought(pintegral,sig) & incr(ppeak,sig) & nought(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 3}
+        
+        # o++
+        if (nought(pintegral,sig) & incr(ppeak,sig) & incr(pamp,sig) & luc[i,j] == 1)
+        {syndrome_arable[i,j] <- 3}
+        
+        # no change
+        
+        # ooo
+        if (nought(pintegral,sig) & nought(ppeak,sig) & nought(pamp,sig))
+        {
+          syndrome_arable[i,j] <- 0
+          syndrome_natural[i,j] <- 0
+        
+        }
+        
+      }
 
       
 
@@ -297,8 +306,17 @@ for (i in 1:nrows) {
 }
 close(pb)
 
+file_out = '/home/maxim/Documents/coursework/time-series-analysis/s6/syndrome_raster.tif'
+file_out_syndrome_natural = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_natural.tif'
+file_out_syndrome_arable = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_arable.tif'
+
 cube = brick(filename)
 syndrome_raster=raster(syndrome,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
 writeRaster(syndrome_raster, file_out, format="GTiff", overwrite=TRUE)
-KML (syndrome_raster, file ='syndrome',  col = hcl.colors(8, "YlOrRd", rev = TRUE) ,
-     maxpixels = ncell ( raster (pval_raster)),overwrite="TRUE")
+
+syndrome_natural_raster=raster(syndrome_natural,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+writeRaster(syndrome_natural_raster, file_out_syndrome_natural, format="GTiff", overwrite=TRUE)
+
+syndrome_arable_raster=raster(syndrome_arable,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+writeRaster(syndrome_arable_raster, file_out_syndrome_arable, format="GTiff", overwrite=TRUE)
+
