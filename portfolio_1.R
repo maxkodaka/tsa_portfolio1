@@ -306,6 +306,33 @@ for (i in 1:nrows) {
 }
 close(pb)
 
+## Calculation of syndrome statistics
+syndrome_stats = data.frame(
+  syndrome_index = c(1,2,3,4,5,6,7,8),
+  syndrome = c(
+    'increasing_biomass',
+    'decreasing_biomass',
+    'crop change',
+    'increasing productivity',
+    'decreasing productivity',
+    'expansion of irrigated arable land',
+    'decline of irrigated arable land',
+    'no syndrome'),
+  pixel_count = array(0,8)
+)
+for(i in 1:8){
+  if(i<=2){
+    syndrome_stats[i,'pixel_count'] = length(which(syndrome_natural==i))
+  }
+  else if(i<=7){
+    syndrome_stats[i,'pixel_count'] = length(which(syndrome_arable==i))
+  }
+  else{
+    syndrome_stats[i,'pixel_count'] = length(which(is.na(syndrome_natural))) + length(which(is.na(syndrome_arable)))
+  }
+
+}
+
 file_out = '/home/maxim/Documents/coursework/time-series-analysis/s6/syndrome_raster.tif'
 file_out_syndrome_natural = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_natural.tif'
 file_out_syndrome_arable = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_arable.tif'
