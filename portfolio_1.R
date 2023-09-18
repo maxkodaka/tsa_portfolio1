@@ -320,6 +320,26 @@ syndrome_stats = data.frame(
     'no syndrome'),
   pixel_count = array(0,8)
 )
+
+syndrome_stats_natural = data.frame(
+  syndrome = c(
+    'increasing_biomass',
+    'decreasing_biomass',
+    'no syndrome'),
+  pixel_count = array(0,3)
+)
+
+syndrome_stats_arable = data.frame(
+  syndrome = c(
+    'crop change',
+    'increasing productivity',
+    'decreasing productivity',
+    'expansion of irrigated arable land',
+    'decline of irrigated arable land',
+    'no syndrome'),
+  pixel_count = array(0,6)
+)
+
 for(i in 1:8){
   if(i<=2){
     syndrome_stats[i,'pixel_count'] = length(which(syndrome_natural==i))
@@ -328,10 +348,33 @@ for(i in 1:8){
     syndrome_stats[i,'pixel_count'] = length(which(syndrome_arable==i))
   }
   else{
-    syndrome_stats[i,'pixel_count'] = length(which(is.na(syndrome_natural))) + length(which(is.na(syndrome_arable)))
+    syndrome_stats[i,'pixel_count'] = dim(luc)[1]*dim(luc)[2] - sum(syndrome_stats[1:7,'pixel_count'])
   }
 
 }
+
+for(i in 1:3){
+  if(i<=2){
+    syndrome_stats_natural[i,'pixel_count'] = length(which(syndrome_natural==i))
+  }
+  else{
+    syndrome_stats_natural[i,'pixel_count'] = length(which(luc==2)) - sum(syndrome_stats_natural[1:2,'pixel_count'])
+  }
+  
+}
+syndrome_stats_natural['percent'] = 100*syndrome_stats_natural['pixel_count']/sum(syndrome_stats_natural['pixel_count'])
+
+for(i in 3:8){
+  if(i<=7){
+    syndrome_stats_arable[i-2,'pixel_count'] = length(which(syndrome_arable==i))
+  }
+  else{
+    syndrome_stats_arable[i-2,'pixel_count'] = length(which(luc==1)) - sum(syndrome_stats_arable[1:5,'pixel_count'])
+  }
+  
+}
+syndrome_stats_arable['percent'] = 100*syndrome_stats_arable['pixel_count']/sum(syndrome_stats_arable['pixel_count'])
+
 
 file_out = '/home/maxim/Documents/coursework/time-series-analysis/s6/syndrome_raster.tif'
 file_out_syndrome_natural = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_natural.tif'
