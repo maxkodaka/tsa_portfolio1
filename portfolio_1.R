@@ -1,14 +1,87 @@
 library(raster)
 library(caTools)
 library(Kendall)
+library(sf)
+library(geojsonio)
+library(flextable)
+
+
+######## PATHS #######
+
+setwd('/home/maxim/Documents/coursework/time-series-analysis/data/')
+
+#### input paths ####
+
+# path to current files in LAEA projection
 
 filename = 'GIMMS_Iberian'
 filename_class = 'clc8km_clip_recode_Iberian_2classes'
 
-setwd('/home/maxim/Documents/coursework/time-series-analysis/data/')
-#setwd('U:\\Time Series Analysis\\s5')
+# original version in WGS84 projection
+
+#filename = '/home/maxim/Documents/coursework/time-series-analysis/data/test/GIMMS_CLC_lamb_conf_NEW/GIMMS_Iberian'
+#filename_class = '/home/maxim/Documents/coursework/time-series-analysis/data/test/GIMMS_CLC_lamb_conf_NEW/GIMMS_CLC_lamb_conf_NEW/clc8km_clip_recode_Iberian_2classes'
+
+path_portugal = 'gadm_PRT_0.json'
+path_spain = 'gadm_ESP_0.json'
+
+#### output paths ####
+
+# original output data path
+#outdir = '../output'
+
+# cropped data path
+outdir = '../output/iberia_cropped_versions/'
+
+file_out = paste(outdir,'syndrome_raster.tif')
+file_out_syndrome_natural = paste(outdir,'syndrome_natural.tif')
+file_out_syndrome_arable = paste(outdir,'syndrome_arable.tif')
+
+file_out_syndrome_stats_natural = paste(outdir,'syndrome_stats_natural.docx')
+file_out_syndrome_stats_arable = paste(outdir,'syndrome_stats_arable.docx')
+
+####### Input and conversion #########
+
+# Case 1: read it in just as an array
 cube = read.ENVI(filename,headerfile=paste(filename,'.hdr',sep='')) #from caTools
+
+# Case 2: read it in as a data cube
+# The array format in Case 1 is not readable by the crop function. But can it be iterated in the same way?
+# -Yes it can with some minor tweaks.
+cube_brick = brick(filename)
+
+
+# import spain and portugal national boundaries geojson data
+geom_prt = st_read(path_portugal)
+geom_sp = st_read(path_spain)
+
+# combine to create iberia geojson
+geom_iberia = st_union(geom_prt$geometry,geom_sp$geometry)
+
+# Convert to a spatial polygon object
+geom_iberia <- st_as_sf(geom_iberia)
+
+geom_iberia = st_transform(geom_iberia, crs = crs(cube_brick))
+
+#crop cube to Iberian peninsula
+cube_brick = crop(cube_brick, geom_iberia)
+
+
+# convert back to array as in Prof. Udelhoven's original implementation.
+cube2 = as.array(cube_brick)
+
+# binary classification map
+# Case 1: Read in simply as an array
 luc<-read.ENVI(filename_class,headerfile=paste(filename_class,'.hdr',sep='')) #
+
+# Case 2: Read in as a raster so that we have the crs for cropping purposes.
+luc_rast = raster(filename_class)
+
+# crop to Iberian peninsula
+luc_rast = crop(luc_rast, geom_iberia)
+
+# Convert back to a matrix as in Prof. Udelhoven's original implementation.
+luc = as.matrix(luc_rast)
 
 dim(cube)
 dim(luc)
@@ -71,9 +144,9 @@ pb = txtProgressBar(title='progress bar',min=0,max =nrows) #run together with lo
 for (i in 1:nrows) {
   for (j in 1:ncols) {
     setTxtProgressBar(pb, i, title = round(i / nrow(cube) * 100, 0))
-    GIMMS = cube[i, j,]
+    GIMMS = cube[i, j,] #as.numeric added
     
-    if (var(GIMMS) > 0) {
+    if (var(GIMMS) > 0 & !is.na(GIMMS[1])) { #added !is.na(GIMMS) because I am using a different type of datacube now
       time = 1:12
       for (k in 1:years) {
         # Fit Fourier Polynomials to monthly NDVI data derive the following phenological
@@ -317,7 +390,7 @@ syndrome_stats = data.frame(
     'decreasing productivity',
     'expansion of irrigated arable land',
     'decline of irrigated arable land',
-    'no syndrome'),
+    'no change'),
   pixel_count = array(0,8)
 )
 
@@ -325,7 +398,7 @@ syndrome_stats_natural = data.frame(
   syndrome = c(
     'increasing_biomass',
     'decreasing_biomass',
-    'no syndrome'),
+    'no change'),
   pixel_count = array(0,3)
 )
 
@@ -336,7 +409,7 @@ syndrome_stats_arable = data.frame(
     'decreasing productivity',
     'expansion of irrigated arable land',
     'decline of irrigated arable land',
-    'no syndrome'),
+    'no change'),
   pixel_count = array(0,6)
 )
 
@@ -375,18 +448,34 @@ for(i in 3:8){
 }
 syndrome_stats_arable['percent'] = 100*syndrome_stats_arable['pixel_count']/sum(syndrome_stats_arable['pixel_count'])
 
+#### Writing Output ####
 
-file_out = '/home/maxim/Documents/coursework/time-series-analysis/s6/syndrome_raster.tif'
-file_out_syndrome_natural = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_natural.tif'
-file_out_syndrome_arable = '/home/maxim/Documents/coursework/time-series-analysis/output/syndrome_arable.tif'
+## Raster to Geotiff ##
 
-cube = brick(filename)
-syndrome_raster=raster(syndrome,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+#cube = brick(filename) # Can use the cropped or uncropped cube defined in the input section
+syndrome_raster=raster(syndrome,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
 writeRaster(syndrome_raster, file_out, format="GTiff", overwrite=TRUE)
 
-syndrome_natural_raster=raster(syndrome_natural,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+syndrome_natural_raster=raster(syndrome_natural,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
 writeRaster(syndrome_natural_raster, file_out_syndrome_natural, format="GTiff", overwrite=TRUE)
 
-syndrome_arable_raster=raster(syndrome_arable,xmn=extent(cube)[1], xmx=extent(cube)[2], ymn=extent(cube)[3], ymx=extent(cube)[4], crs=projection(cube))
+syndrome_arable_raster=raster(syndrome_arable,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
 writeRaster(syndrome_arable_raster, file_out_syndrome_arable, format="GTiff", overwrite=TRUE)
 
+
+## Convert dataframes to flextables and output to docx or png ##
+
+set_flextable_defaults(
+  font.size = 10, #theme_fun = theme_vanilla,
+  padding = 6,
+  )
+
+#save_as_docx(set_caption(flextable(syndrome_stats_arable),path=file_out_syndrome_stats_arable),'Arable Land Change Syndromes')
+#save_as_docx(set_caption(flextable(syndrome_stats_natural),path=file_out_syndrome_stats_natural),'Semi-Natural Land Change Syndromes')
+
+save_as_image(set_caption(flextable(syndrome_stats_arable),'Arable Land Change Syndromes'),path=paste(outdir,'syndrome_stats_arable.png'))
+save_as_image(set_caption(flextable(syndrome_stats_natural),'Semi-Natural Land Change Syndromes'),path=paste(outdir,'syndrome_stats_natural.png'))
+
+
+#write iberia geojson to file for qgis overlay
+geojson_write(st_sf(geometry=geom_iberia),file=paste(outdir,'gadm_IBR_0.json'))
