@@ -31,7 +31,7 @@ path_spain = 'gadm_ESP_0.json'
 #outdir = '../output'
 
 # cropped data path
-outdir = '../output/iberia_cropped_versions/'
+outdir = '../output/seasonalmk/'
 
 file_out = paste(outdir,'syndrome_raster.tif')
 file_out_syndrome_natural = paste(outdir,'syndrome_natural.tif')
@@ -127,17 +127,32 @@ numsigtrends010 = syndrome
 
 ## increasing
 incr <- function(x, sig){
-  abs(x) < sig & x > 0
+  if(!is.na(x)){
+    abs(x) < sig & x > 0
+  }
+  else{
+    FALSE
+  }
 }
 
 ## decreasing
 decr <- function(x, sig){
-  abs(x) < sig & x < 0
+  if(!is.na(x)){
+    abs(x) < sig & x < 0
+  }
+  else{
+    FALSE
+  }
 }
 
 ## no change
 nought <- function(x, sig){
-  abs(x) > sig
+  if(is.na(x)){
+    TRUE
+  }
+  else{
+    abs(x) > sig
+  }
 }
 
 pb = txtProgressBar(title='progress bar',min=0,max =nrows) #run together with loop
@@ -163,9 +178,9 @@ for (i in 1:nrows) {
         time = time + 12
       }
       
-      model_integral = MannKendall(ts(integral))     # Should be seasonal mann kendall
-      model_amp = MannKendall(ts(magnitude))         
-      model_peak = MannKendall(ts(peaktime))         
+      model_integral = SeasonalMannKendall(ts(integral))     # Should be seasonal mann kendall
+      model_amp = SeasonalMannKendall(ts(magnitude))         
+      model_peak = SeasonalMannKendall(ts(peaktime))         
       
       # Content of the MannKendall object: tau, sl, S, D, varS
       
@@ -228,7 +243,9 @@ for (i in 1:nrows) {
       ## increasing irrigation - 6
       ## decreasing irrigation - 7
       
-      ## luc values: Is this correct??
+      
+      ## land cover classes
+      
       ## arable land: 1
       ## semi-natural: 2
       
