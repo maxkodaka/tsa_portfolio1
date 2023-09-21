@@ -1,3 +1,7 @@
+##########################
+######## IMPORTS ########
+########################
+
 library(raster)
 library(caTools)
 library(Kendall)
@@ -5,12 +9,15 @@ library(sf)
 library(geojsonio)
 library(flextable)
 
-
-######## PATHS #######
+########################
+######## PATHS ########
+######################
 
 setwd('/home/maxim/Documents/coursework/time-series-analysis/data/')
 
+
 #### input paths ####
+####################
 
 # path to current files in LAEA projection
 
@@ -25,7 +32,9 @@ filename_class = 'clc8km_clip_recode_Iberian_2classes'
 path_portugal = 'gadm_PRT_0.json'
 path_spain = 'gadm_ESP_0.json'
 
+
 #### output paths ####
+#####################
 
 # original output data path
 #outdir = '../output'
@@ -33,14 +42,31 @@ path_spain = 'gadm_ESP_0.json'
 # cropped data path
 outdir = '../output/seasonalmk/'
 
+## syndrome maps##
+#################
+
 file_out = paste(outdir,'syndrome_raster.tif')
 file_out_syndrome_natural = paste(outdir,'syndrome_natural.tif')
 file_out_syndrome_arable = paste(outdir,'syndrome_arable.tif')
 
-file_out_syndrome_stats_natural = paste(outdir,'syndrome_stats_natural.docx')
-file_out_syndrome_stats_arable = paste(outdir,'syndrome_stats_arable.docx')
+## significant trend maps ##
+###########################
 
-####### Input and conversion #########
+file_out_numsigtrends005 = paste(outdir,'numsigtrends_005.tif')
+file_out_numsigtrends010 = paste(outdir,'numsigtrends_010.tif')
+
+file_out_twosigtrends005 = paste(outdir,'twosigtrends_005.tif')
+file_out_twosigtrends010 = paste(outdir,'twosigtrends_010.tif')
+
+## syndrome stats ##
+###################
+
+file_out_syndrome_stats_natural = paste(outdir,'syndrome_stats_natural.png')
+file_out_syndrome_stats_arable = paste(outdir,'syndrome_stats_arable.png')
+
+###############################
+#### Input and conversion ####
+#############################
 
 # Case 1: read it in just as an array
 cube = read.ENVI(filename,headerfile=paste(filename,'.hdr',sep='')) #from caTools
@@ -83,47 +109,68 @@ luc_rast = crop(luc_rast, geom_iberia)
 # Convert back to a matrix as in Prof. Udelhoven's original implementation.
 luc = as.matrix(luc_rast)
 
-dim(cube)
-dim(luc)
-years = dim(cube)[3]/12
-lin = 1:12
-# Fourier Polynomials
+
+##############################
+#### Fourier Polynomials ####
+############################
+
+lin =1:12
 x1 = sin(2*pi*1/12*(lin))
 x2 = cos(2*pi*1/12*(lin))
 x3 = sin(2*pi*2/12*(lin))
 x4 = cos(2*pi*2/12*(lin))
 fp = cbind(lin,x1,x2,x3,x4)
-cor(fp)
+
+
+
+#########################
+#### INITIALIZATION ####
+#######################
+
+years = dim(cube)[3]/12
 
 nrows=nrow(cube)
 ncols=ncol(cube)
 
-# Initialize all arrays
 dim = c(years,ncol(cube),nrow(cube))
-t = array(NA,dim)                       # dimensions: 32, 152, 93 This is not used for anything??
-meanNDVI = aperm(t)                     # dimensions: 93, 152, 32
 
-magnitude = array(NA, 32)                   # dimensions: 32      Do we still need to initialize if its so small now?
-peaktime = array(NA, 32)                    # dimensions: 32      Do we still need to initialize if its so small now?
-integral = array(NA, 32)                    # dimensions: 32      Do we still need to initialize if its so small now?
+meanNDVI = aperm(array(NA,dim))                     # dimensions: 93, 152, 32
 
-# Maybe we should not allocate these because each pixel has a list of 5 model attributes.
-# At least this initialization does not work.
-#model_integral = array(NA, c(nrows, ncols)) # dimensions: 93, 152
-#model_amp = array(NA, c(nrows, ncols))      # dimensions: 93, 152
-#model_peak = array(NA, c(nrows, ncols))     # dimensions: 93, 152
+magnitude = array(NA, 32)                         
+peaktime = array(NA, 32)                          
+integral = array(NA, 32)                         
 
 pintegral = array(NA, 32) 
 pamp = array(NA, 32)      
 ppeak = array(NA, 32)   
 
-#syndrome<-matrix(data <- -999, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 syndrome<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 syndrome_natural<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 syndrome_arable<-matrix(data <- NA, nrow <- dim(cube)[1],ncol <- dim(cube)[2])
 numsigtrends005 = syndrome
 numsigtrends010 = syndrome
-## Some helpful functions
+twosigtrends005 = syndrome
+twosigtrends010 = syndrome
+
+## significant trend stats tables for p = 0.05 and 0.10
+
+sigtrendstats005 = data.frame(
+  s = c(0,1,2,3),
+  arable_cnt = array(0, 4),
+  seminatural_cnt = array(0, 4)
+)
+
+sigtrendstats010 = data.frame(
+  s = c(0,1,2,3),
+  arable_cnt = array(0, 4),
+  seminatural_cnt = array(0, 4)
+)
+
+
+##########################
+#### TREND FUNCTIONS ####
+########################
+
 
 ## increasing
 incr <- function(x, sig){
@@ -155,42 +202,62 @@ nought <- function(x, sig){
   }
 }
 
-pb = txtProgressBar(title='progress bar',min=0,max =nrows) #run together with loop
+####################
+#### MAIN LOOP ####
+##################
+
+pb = txtProgressBar(title='progress bar',min=0,max =nrows)
 for (i in 1:nrows) {
   for (j in 1:ncols) {
     setTxtProgressBar(pb, i, title = round(i / nrow(cube) * 100, 0))
-    GIMMS = cube[i, j,] #as.numeric added
+    GIMMS = cube[i, j,] 
     
     if (var(GIMMS) > 0 & !is.na(GIMMS[1])) { #added !is.na(GIMMS) because I am using a different type of datacube now
       time = 1:12
       for (k in 1:years) {
-        # Fit Fourier Polynomials to monthly NDVI data derive the following phenological
+        
+        ##################################
+        #### FIT FOURIER POLYNOMIALS ####
+        ################################
+        
+        # Fit Fourier Polynomials to monthly NDVI data to derive the following phenological
         # properties in each year: a) NDVI peaking times, b) NDVI magnitudes, c) NDVI integrals.
+        
         model = lm(GIMMS[time] ~ fp)
-        ##################################################### The following have been changed to single vectors because:
-        magnitude[k] = max(model$fit) - min(model$fit)      # We may as well use these as temporary variables?
-        peaktime[k] = which(model$fit == max(model$fit))    # We may as well use these as temporary variables?
-        integral[k] = sum(GIMMS[time])                      # We may as well use these as temporary variables?
+        
+        magnitude[k] = max(model$fit) - min(model$fit)      
+        peaktime[k] = which(model$fit == max(model$fit))  
+        integral[k] = sum(GIMMS[time])                      
         
         meanNDVI[i, j, k] = mean(GIMMS[time])
-        # Fit a trend model (Seasonal Kendall test) to derive monotonic trends in the three phenological time-series.
         
         time = time + 12
       }
       
-      model_integral = SeasonalMannKendall(ts(integral))     # Should be seasonal mann kendall
+      #######################
+      #### MANN KENDALL ####
+      #####################
+      
+      # Fit a trend model (Seasonal Kendall test) to derive monotonic trends in the three phenological time-series.
+      
+      
+      model_integral = SeasonalMannKendall(ts(integral))     
       model_amp = SeasonalMannKendall(ts(magnitude))         
       model_peak = SeasonalMannKendall(ts(peaktime))         
       
       # Content of the MannKendall object: tau, sl, S, D, varS
       
-      # There is some controversy about the following. It was unclear why it's multiplied by the sign.
-      # I guess because when we calculate the syndromes, it matters whether it is increasing or decreasing.
-      # But then why not just use the sign of tau in the boolean conditional statements?
+      ##########################
+      #### PSEUDO P-VALUES ####
+      ########################
       
       pintegral = model_integral$sl * as.numeric(sign(model_integral$tau))
       pamp = model_amp$sl * as.numeric(sign(model_amp$tau))
       ppeak = model_peak$sl * as.numeric(sign(model_peak$tau))
+      
+      ##################################
+      #### SIGNIFICANT TREND STATS ####
+      ################################
       
       # Part A.3: Identify those pixels with at least two significant (α=5% and 10%) trends concerning
       # NDVI, peaking time or magnitude.
@@ -215,6 +282,17 @@ for (i in 1:nrows) {
       
       numsigtrends005[i,j] = s
       
+      if(s>=2){
+        twosigtrends005[i,j] = 1
+      } else(
+        twosigtrends005[i,j] = 0
+      )
+      
+      # Counts of trends by land cover class for significance of 0.05
+      if (!is.na(luc[i,j])){
+        sigtrendstats005[s+1,luc[i,j]+1] = sigtrendstats005[s+1,luc[i,j]+1] + 1
+      }
+      
       # For significance of 0.10
       
       s = 0
@@ -232,8 +310,25 @@ for (i in 1:nrows) {
       }
       
       numsigtrends010[i,j] = s      
+      
+      if(s>=2){
+        twosigtrends010[i,j] = 1
+      } else(
+        twosigtrends010[i,j] = 0
+      )
+      
+      # Counts of trends by land cover class for significance of 0.10
+      if (!is.na(luc[i,j])){
+        sigtrendstats010[s+1,luc[i,j]+1] = sigtrendstats010[s+1,luc[i,j]+1] + 1
+      }
 
-      ## Syndromes - part B of Project
+      ####################
+      #### SYNDROMES ####
+      ##################
+      
+      #part B of Project
+      
+      ## Syndrome definitions
       
       ## increasing biomass - 1
       ## decreasing biomass - 2
@@ -396,7 +491,23 @@ for (i in 1:nrows) {
 }
 close(pb)
 
-## Calculation of syndrome statistics
+###################################################
+#### SIGNIFICANT TREND CUMULATIVE PERCENTAGES ####
+#################################################
+
+for(i in 4:1){
+  sigtrendstats005[i,'arable_cumpercent'] = sum(sigtrendstats005['arable_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['arable_cnt'])
+  sigtrendstats010[i,'arable_cumpercent'] = sum(sigtrendstats010['arable_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['arable_cnt'])
+  
+  sigtrendstats005[i,'seminatural_cumpercent'] = sum(sigtrendstats005['seminatural_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['seminatural_cnt'])
+  sigtrendstats010[i,'seminatural_cumpercent'] = sum(sigtrendstats010['seminatural_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['seminatural_cnt'])
+}
+
+
+##############################
+#### SYNDROME STATISTICS ####
+############################
+
 syndrome_stats = data.frame(
   syndrome_index = c(1,2,3,4,5,6,7,8),
   syndrome = c(
@@ -465,11 +576,16 @@ for(i in 3:8){
 }
 syndrome_stats_arable['percent'] = 100*syndrome_stats_arable['pixel_count']/sum(syndrome_stats_arable['pixel_count'])
 
-#### Writing Output ####
+#########################
+#### WRITING OUTPUT ####
+#######################
 
 ## Raster to Geotiff ##
+######################
 
-#cube = brick(filename) # Can use the cropped or uncropped cube defined in the input section
+
+# Syndromes #
+############
 syndrome_raster=raster(syndrome,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
 writeRaster(syndrome_raster, file_out, format="GTiff", overwrite=TRUE)
 
@@ -479,20 +595,44 @@ writeRaster(syndrome_natural_raster, file_out_syndrome_natural, format="GTiff", 
 syndrome_arable_raster=raster(syndrome_arable,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
 writeRaster(syndrome_arable_raster, file_out_syndrome_arable, format="GTiff", overwrite=TRUE)
 
+# significant trends #
+#####################
+
+numsigtrends005_raster=raster(numsigtrends005,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
+numsigtrends010_raster=raster(numsigtrends010,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
+
+twosigtrends005_raster=raster(twosigtrends005,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
+twosigtrends010_raster=raster(twosigtrends010,xmn=extent(cube_brick)[1], xmx=extent(cube_brick)[2], ymn=extent(cube_brick)[3], ymx=extent(cube_brick)[4], crs=projection(cube_brick))
+
+writeRaster(numsigtrends005_raster, file_out_numsigtrends005, format="GTiff", overwrite=TRUE)
+writeRaster(numsigtrends010_raster, file_out_numsigtrends010, format="GTiff", overwrite=TRUE)
+
+writeRaster(twosigtrends005_raster, file_out_twosigtrends005, format="GTiff", overwrite=TRUE)
+writeRaster(twosigtrends010_raster, file_out_twosigtrends010, format="GTiff", overwrite=TRUE)
+
+
 
 ## Convert dataframes to flextables and output to docx or png ##
+###############################################################
 
 set_flextable_defaults(
   font.size = 10, #theme_fun = theme_vanilla,
   padding = 6,
   )
 
+## saving as docx (results don't look good)
 #save_as_docx(set_caption(flextable(syndrome_stats_arable),path=file_out_syndrome_stats_arable),'Arable Land Change Syndromes')
 #save_as_docx(set_caption(flextable(syndrome_stats_natural),path=file_out_syndrome_stats_natural),'Semi-Natural Land Change Syndromes')
 
-save_as_image(set_caption(flextable(syndrome_stats_arable),'Arable Land Change Syndromes'),path=paste(outdir,'syndrome_stats_arable.png'))
-save_as_image(set_caption(flextable(syndrome_stats_natural),'Semi-Natural Land Change Syndromes'),path=paste(outdir,'syndrome_stats_natural.png'))
+ft_a = flextable(syndrome_stats_arable)
+ft_n = flextable(syndrome_stats_natural)
 
+ft_a = set_caption(ft_a,'Arable Land Change Syndromes')
+ft_n = set_caption(ft_n,'Semi-Natural Land Change Syndromes')
 
-#write iberia geojson to file for qgis overlay
+save_as_image(ft_a,path=paste(outdir,'syndrome_stats_arable.png'))
+save_as_image(ft_n,path=paste(outdir,'syndrome_stats_natural.png'))
+
+## Iberia Geometry ##
+####################
 geojson_write(st_sf(geometry=geom_iberia),file=paste(outdir,'gadm_IBR_0.json'))
