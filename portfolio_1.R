@@ -157,13 +157,15 @@ twosigtrends010 = syndrome
 sigtrendstats005 = data.frame(
   s = c(0,1,2,3),
   arable_cnt = array(0, 4),
-  seminatural_cnt = array(0, 4)
+  seminatural_cnt = array(0, 4),
+  total_cnt = array(0,4)
 )
 
 sigtrendstats010 = data.frame(
   s = c(0,1,2,3),
   arable_cnt = array(0, 4),
-  seminatural_cnt = array(0, 4)
+  seminatural_cnt = array(0, 4),
+  total_cnt = array(0,4)
 )
 
 
@@ -292,6 +294,7 @@ for (i in 1:nrows) {
       if (!is.na(luc[i,j])){
         sigtrendstats005[s+1,luc[i,j]+1] = sigtrendstats005[s+1,luc[i,j]+1] + 1
       }
+      sigtrendstats005[s+1,'total_cnt'] = sigtrendstats005[s+1,'total_cnt'] + 1
       
       # For significance of 0.10
       
@@ -321,6 +324,7 @@ for (i in 1:nrows) {
       if (!is.na(luc[i,j])){
         sigtrendstats010[s+1,luc[i,j]+1] = sigtrendstats010[s+1,luc[i,j]+1] + 1
       }
+      sigtrendstats010[s+1,'total_cnt'] = sigtrendstats010[s+1,'total_cnt'] + 1
 
       ####################
       #### SYNDROMES ####
@@ -496,12 +500,24 @@ close(pb)
 #################################################
 
 for(i in 4:1){
-  sigtrendstats005[i,'arable_cumpercent'] = sum(sigtrendstats005['arable_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['arable_cnt'])
-  sigtrendstats010[i,'arable_cumpercent'] = sum(sigtrendstats010['arable_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['arable_cnt'])
+  sigtrendstats005[i,'arable_cumpercent'] = 100*sum(sigtrendstats005['arable_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['arable_cnt'])
+  sigtrendstats010[i,'arable_cumpercent'] = 100*sum(sigtrendstats010['arable_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['arable_cnt'])
   
-  sigtrendstats005[i,'seminatural_cumpercent'] = sum(sigtrendstats005['seminatural_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['seminatural_cnt'])
-  sigtrendstats010[i,'seminatural_cumpercent'] = sum(sigtrendstats010['seminatural_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['seminatural_cnt'])
+  sigtrendstats005[i,'seminatural_cumpercent'] = 100*sum(sigtrendstats005['seminatural_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['seminatural_cnt'])
+  sigtrendstats010[i,'seminatural_cumpercent'] = 100*sum(sigtrendstats010['seminatural_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['seminatural_cnt'])
+
+  sigtrendstats005[i,'total_cumpercent'] = 100*sum(sigtrendstats005['total_cnt'][sigtrendstats005['s']>=i-1])/sum(sigtrendstats005['total_cnt'])
+  sigtrendstats010[i,'total_cumpercent'] = 100*sum(sigtrendstats010['total_cnt'][sigtrendstats010['s']>=i-1])/sum(sigtrendstats010['total_cnt'])
 }
+
+sigtrendstats005['arable_cumpercent'] = round(sigtrendstats005['arable_cumpercent'],2)
+sigtrendstats005['seminatural_cumpercent'] = round(sigtrendstats005['seminatural_cumpercent'],2)
+sigtrendstats005['total_cumpercent'] = round(sigtrendstats005['total_cumpercent'],2)
+
+sigtrendstats010['arable_cumpercent'] = round(sigtrendstats010['arable_cumpercent'],2)
+sigtrendstats010['seminatural_cumpercent'] = round(sigtrendstats010['seminatural_cumpercent'],2)
+sigtrendstats010['total_cumpercent'] = round(sigtrendstats010['total_cumpercent'],2)
+
 
 
 ##############################
@@ -564,6 +580,7 @@ for(i in 1:3){
   
 }
 syndrome_stats_natural['percent'] = 100*syndrome_stats_natural['pixel_count']/sum(syndrome_stats_natural['pixel_count'])
+syndrome_stats_natural['percent'] = round(syndrome_stats_natural['percent'],2)
 
 for(i in 3:8){
   if(i<=7){
@@ -575,6 +592,7 @@ for(i in 3:8){
   
 }
 syndrome_stats_arable['percent'] = 100*syndrome_stats_arable['pixel_count']/sum(syndrome_stats_arable['pixel_count'])
+syndrome_stats_arable['percent'] = round(syndrome_stats_arable['percent'],2)
 
 #########################
 #### WRITING OUTPUT ####
@@ -627,11 +645,20 @@ set_flextable_defaults(
 ft_a = flextable(syndrome_stats_arable)
 ft_n = flextable(syndrome_stats_natural)
 
+ft_s05 = flextable(sigtrendstats005)
+ft_s10 = flextable(sigtrendstats010)
+
 ft_a = set_caption(ft_a,'Arable Land Change Syndromes')
 ft_n = set_caption(ft_n,'Semi-Natural Land Change Syndromes')
 
+ft_s05 = set_caption(ft_s05,'Significant trend statistics, p=0.05')
+ft_s10 = set_caption(ft_s10,'Sigfnificant trend statistics, p=0.10')
+
 save_as_image(ft_a,path=paste(outdir,'syndrome_stats_arable.png'))
 save_as_image(ft_n,path=paste(outdir,'syndrome_stats_natural.png'))
+
+save_as_image(ft_s05,path=paste(outdir,'sigtrendstats005.png'))
+save_as_image(ft_s10,path=paste(outdir,'sigtrendstats010_natural.png'))
 
 ## Iberia Geometry ##
 ####################
